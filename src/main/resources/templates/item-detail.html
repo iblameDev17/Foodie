@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Foodie | Item Details</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-[#FFF8F0]">
+    <nav class="bg-white shadow-md p-4 flex justify-between items-center border-b-4 border-[#FF8C42]">
+        <h1 class="text-3xl font-bold text-[#FF8C42]">Foodie.</h1>
+        <div class="flex items-center gap-6">
+            <span class="text-gray-700 font-medium">Welcome back, <span class="text-[#FF8C42]" th:text="${userName}">User</span>!</span>
+            <a href="/cart" class="relative bg-orange-100 text-[#FF8C42] px-4 py-2 rounded-lg hover:bg-orange-200 transition font-bold flex items-center gap-2">
+                🛒 Cart <span th:if="${cartSize > 0}" class="bg-[#FF8C42] text-white text-xs px-2 py-1 rounded-full" th:text="${cartSize}">0</span>
+            </a>
+            <a href="/logout" class="bg-[#FF8C42] text-white px-4 py-2 rounded-lg hover:bg-[#E67E30] transition">Logout</a>
+        </div>
+    </nav>
+
+    <div class="max-w-6xl mx-auto p-6">
+        <a href="/menu" class="text-[#FF8C42] font-bold hover:underline mb-6 inline-block">← Back to Menu</a>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 bg-white rounded-3xl shadow-lg p-8 border border-orange-100">
+            <!-- Image Section -->
+            <div class="flex items-center justify-center">
+                <img th:src="${item.image}" th:alt="${item.name}" class="rounded-2xl w-full h-96 object-cover shadow-lg">
+            </div>
+
+            <!-- Details Section -->
+            <div class="flex flex-col justify-center">
+                <h1 class="text-4xl font-extrabold text-gray-800 mb-4" th:text="${item.name}">Item Name</h1>
+                
+                <div class="flex items-center gap-4 mb-6">
+                    <span class="text-5xl font-bold text-[#FF8C42]" th:text="'₹' + ${item.price}">₹0</span>
+                    <div class="bg-green-100 text-green-700 px-4 py-2 rounded-lg font-semibold">
+                        Available
+                    </div>
+                </div>
+
+                <p class="text-xl text-gray-600 mb-8 leading-relaxed" th:text="${item.description}">Description goes here</p>
+
+                <!-- Quantity Selector -->
+                <div class="mb-8 flex items-center gap-4">
+                    <label class="text-lg font-bold text-gray-700">Quantity:</label>
+                    <div class="flex items-center border-2 border-gray-300 rounded-lg">
+                        <button id="decreaseQty" class="px-4 py-2 text-2xl text-gray-600 hover:bg-gray-100">−</button>
+                        <input id="quantity" type="number" value="1" min="1" class="w-16 text-center text-xl font-bold py-2 border-l-2 border-r-2 border-gray-300 focus:outline-none" readonly>
+                        <button id="increaseQty" class="px-4 py-2 text-2xl text-gray-600 hover:bg-gray-100">+</button>
+                    </div>
+                </div>
+
+                <!-- Add to Cart Form -->
+                <form th:action="@{/addToCart}" method="post" class="space-y-4">
+                    <input type="hidden" name="itemId" th:value="${item.id}">
+                    <input type="hidden" name="itemName" th:value="${item.name}">
+                    <input type="hidden" name="itemPrice" th:value="${item.price}">
+                    <input type="hidden" id="quantityInput" name="quantity" value="1">
+
+                    <button type="submit" class="w-full bg-[#FF8C42] text-white py-4 rounded-2xl font-bold text-lg hover:bg-[#E67E30] hover:shadow-lg transition-all">
+                        Add to Cart
+                    </button>
+                </form>
+
+                <!-- Additional Info -->
+                <div class="mt-8 space-y-4 border-t pt-6">
+                    <div class="flex items-center gap-2 text-gray-700">
+                        <span class="text-2xl">⏱️</span>
+                        <span>Delivery Time: 30-45 mins</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-gray-700">
+                        <span class="text-2xl">🚚</span>
+                        <span>Free delivery on orders above ₹500</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-gray-700">
+                        <span class="text-2xl">⭐</span>
+                        <span>4.8/5 - Highly Rated</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const quantityInput = document.getElementById('quantityInput');
+        const quantityDisplay = document.getElementById('quantity');
+        const decreaseBtn = document.getElementById('decreaseQty');
+        const increaseBtn = document.getElementById('increaseQty');
+
+        decreaseBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const current = parseInt(quantityDisplay.value);
+            if (current > 1) {
+                quantityDisplay.value = current - 1;
+                quantityInput.value = current - 1;
+            }
+        });
+
+        increaseBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const current = parseInt(quantityDisplay.value);
+            quantityDisplay.value = current + 1;
+            quantityInput.value = current + 1;
+        });
+
+        document.querySelector('form').addEventListener('submit', (e) => {
+            quantityInput.value = quantityDisplay.value;
+        });
+    </script>
+
+</body>
+</html>

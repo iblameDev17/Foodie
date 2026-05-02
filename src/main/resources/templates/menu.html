@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Foodie | Order Now</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-[#FFF8F0]">
+    <nav class="bg-white shadow-md p-4 flex justify-between items-center border-b-4 border-[#FF8C42] sticky top-0 z-50">
+        <h1 class="text-3xl font-bold text-[#FF8C42]">Foodie.</h1>
+        <div class="flex items-center gap-6">
+            <span class="text-gray-700 font-medium">Welcome back, <span class="text-[#FF8C42]" th:text="${userName}">User</span>!</span>
+            <a href="/cart" class="relative bg-orange-100 text-[#FF8C42] px-4 py-2 rounded-lg hover:bg-orange-200 transition font-bold flex items-center gap-2">
+                🛒 Cart 
+                <span th:if="${cartSize > 0}" class="bg-[#FF8C42] text-white text-xs px-2 py-1 rounded-full font-extrabold" th:text="${cartSize}">0</span>
+            </a>
+            <a href="/logout" class="bg-[#FF8C42] text-white px-4 py-2 rounded-lg hover:bg-[#E67E30] transition">Logout</a>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto p-6">
+        <header class="text-center py-12">
+            <h2 class="text-5xl font-extrabold text-gray-800">What's on your mind?</h2>
+            <p class="text-gray-500 mt-2">Fresh ingredients, fast delivery, and extra love.</p>
+        </header>
+
+        <!-- Food Grid -->
+        <main class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div th:each="item : ${foodItems}" class="bg-white rounded-3xl shadow-lg overflow-hidden border border-orange-100 transform hover:scale-105 transition group cursor-pointer">
+                <!-- Image - Clickable to Details -->
+                <a th:href="@{/item/{id}(id=${item.id})}" class="block overflow-hidden h-48 bg-gray-200">
+                    <img th:src="${item.image}" th:alt="${item.name}" class="w-full h-full object-cover group-hover:brightness-90 transition">
+                </a>
+
+                <div class="p-6">
+                    <!-- Title and Price -->
+                    <div class="flex justify-between items-start mb-3">
+                        <a th:href="@{/item/{id}(id=${item.id})}" class="flex-1">
+                            <h3 class="text-xl font-bold text-gray-800 group-hover:text-[#FF8C42] transition" th:text="${item.name}">Item</h3>
+                        </a>
+                        <span class="text-[#FF8C42] font-bold text-xl whitespace-nowrap ml-2" th:text="'₹' + ${item.price}">₹0</span>
+                    </div>
+
+                    <!-- Description -->
+                    <p class="text-gray-500 text-sm mb-4 line-clamp-2" th:text="${item.description}">Description</p>
+
+                    <!-- Action Buttons -->
+                    <div class="flex gap-2">
+                        <!-- View Details Button -->
+                        <a th:href="@{/item/{id}(id=${item.id})}" class="flex-1 bg-white border-2 border-[#FF8C42] text-[#FF8C42] py-2 rounded-2xl font-bold hover:bg-orange-50 transition text-center">
+                            View Details
+                        </a>
+
+                        <!-- Add to Cart Form -->
+                        <form th:action="@{/addToCart}" method="post" class="flex-1">
+                            <input type="hidden" name="itemId" th:value="${item.id}">
+                            <input type="hidden" name="itemName" th:value="${item.name}">
+                            <input type="hidden" name="itemPrice" th:value="${item.price}">
+                            <button type="submit" class="w-full bg-[#FF8C42] text-white py-2 rounded-2xl font-bold hover:bg-[#E67E30] transition">
+                                Add
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+</body>
+</html>
