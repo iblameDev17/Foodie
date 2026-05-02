@@ -21,42 +21,44 @@
         <header class="text-center py-12">
             <h2 class="text-5xl font-extrabold text-gray-800">What's on your mind?</h2>
             <p class="text-gray-500 mt-2">Fresh ingredients, fast delivery, and extra love.</p>
+            
+            <div class="mt-6 flex justify-center gap-4">
+                <a href="/menu" class="px-6 py-2 rounded-full border-2 border-gray-200 font-bold hover:border-[#FF8C42] transition">All</a>
+                <a href="/menu?vegOnly=true" class="px-6 py-2 rounded-full border-2 border-green-200 text-green-600 font-bold hover:bg-green-50 transition">Veg Only</a>
+                <a href="/menu?vegOnly=false" class="px-6 py-2 rounded-full border-2 border-red-200 text-red-600 font-bold hover:bg-red-50 transition">Non-Veg</a>
+            </div>
         </header>
 
-        <!-- Food Grid -->
-        <main class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div th:each="item : ${foodItems}" class="bg-white rounded-3xl shadow-lg overflow-hidden border border-orange-100 transform hover:scale-105 transition group cursor-pointer">
-                <!-- Image - Clickable to Details -->
-                <a th:href="@{/item/{id}(id=${item.id})}" class="block overflow-hidden h-48 bg-gray-200">
-                    <img th:src="${item.image}" th:alt="${item.name}" class="w-full h-full object-cover group-hover:brightness-90 transition">
-                </a>
+        <main class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div th:each="item : ${foodItems}" class="bg-white rounded-[2.5rem] shadow-lg overflow-hidden border border-orange-100 transform hover:scale-105 transition duration-300 group">
+                
+                <div class="relative h-52 overflow-hidden">
+                    <img th:src="${item.image}" th:alt="${item.name}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+                    <div class="absolute top-4 left-4 px-3 py-1 rounded-full text-[10px] font-bold shadow-sm border"
+                         th:classappend="${item.isVeg ? 'bg-white text-green-600 border-green-200' : 'bg-white text-red-600 border-red-200'}"
+                         th:text="${item.isVeg ? '● VEG' : '● NON-VEG'}">
+                    </div>
+                </div>
 
                 <div class="p-6">
-                    <!-- Title and Price -->
                     <div class="flex justify-between items-start mb-3">
-                        <a th:href="@{/item/{id}(id=${item.id})}" class="flex-1">
-                            <h3 class="text-xl font-bold text-gray-800 group-hover:text-[#FF8C42] transition" th:text="${item.name}">Item</h3>
-                        </a>
-                        <span class="text-[#FF8C42] font-bold text-xl whitespace-nowrap ml-2" th:text="'₹' + ${item.price}">₹0</span>
+                        <h3 class="text-xl font-bold text-gray-800" th:text="${item.name}">Item</h3>
+                        <span class="text-[#FF8C42] font-black text-xl" th:text="'₹' + ${item.price}">₹0</span>
                     </div>
 
-                    <!-- Description -->
-                    <p class="text-gray-500 text-sm mb-4 line-clamp-2" th:text="${item.description}">Description</p>
+                    <p class="text-gray-500 text-sm mb-6 line-clamp-2" th:text="${item.description}">Description</p>
 
-                    <!-- Action Buttons -->
-                    <div class="flex gap-2">
-                        <!-- View Details Button -->
-                        <a th:href="@{/item/{id}(id=${item.id})}" class="flex-1 bg-white border-2 border-[#FF8C42] text-[#FF8C42] py-2 rounded-2xl font-bold hover:bg-orange-50 transition text-center">
-                            View Details
+                    <div class="flex gap-3">
+                        <a th:href="@{/item/{id}(id=${item.id})}" class="flex-1 bg-gray-50 text-gray-600 py-3 rounded-2xl font-bold hover:bg-gray-100 transition text-center text-sm">
+                            Details
                         </a>
 
-                        <!-- Add to Cart Form -->
-                        <form th:action="@{/addToCart}" method="post" class="flex-1">
+                        <form th:action="@{/addToCart}" method="post" class="flex-[1.5]">
                             <input type="hidden" name="itemId" th:value="${item.id}">
                             <input type="hidden" name="itemName" th:value="${item.name}">
                             <input type="hidden" name="itemPrice" th:value="${item.price}">
-                            <button type="submit" class="w-full bg-[#FF8C42] text-white py-2 rounded-2xl font-bold hover:bg-[#E67E30] transition">
-                                Add
+                            <button type="submit" class="w-full bg-[#FF8C42] text-white py-3 rounded-2xl font-bold hover:bg-[#E67E30] hover:shadow-lg transition-all active:scale-95">
+                                Add to Cart
                             </button>
                         </form>
                     </div>
@@ -64,6 +66,5 @@
             </div>
         </main>
     </div>
-
 </body>
 </html>

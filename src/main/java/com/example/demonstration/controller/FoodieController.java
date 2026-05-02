@@ -1,7 +1,9 @@
 package com.example.demonstration.controller;
 
 import com.example.demonstration.model.User;
+import com.example.demonstration.model.FoodItem;
 import com.example.demonstration.repository.UserRepository;
+import com.example.demonstration.repository.FoodRepository;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,29 +21,8 @@ public class FoodieController {
     @Autowired
     private UserRepository userRepository;
 
-    // Helper method to simulate a product database
-    private List<Map<String, Object>> getFoodItems() {
-        List<Map<String, Object>> items = new ArrayList<>();
-        items.add(createFoodItem(1, "Classic Cheeseburger", 249, "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500", "Juicy patty with melted cheddar and fresh veggies."));
-        items.add(createFoodItem(2, "Margherita Pizza", 399, "https://images.unsplash.com/photo-1604068549290-dea0e4a305ca?w=500", "Fresh mozzarella, basil, and tomato sauce."));
-        items.add(createFoodItem(3, "Spicy Chicken Wings", 299, "https://images.unsplash.com/photo-1598103442097-8b74394b95c6?w=500", "Crispy wings with our secret spice blend."));
-        items.add(createFoodItem(4, "Caesar Salad", 199, "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500", "Crisp romaine with parmesan and croutons."));
-        items.add(createFoodItem(5, "Grilled Fish Tacos", 349, "https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=500", "Seasoned grilled fish with cabbage slaw."));
-        items.add(createFoodItem(6, "Butter Chicken", 349, "https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?w=500", "Creamy tomato sauce with tender chicken pieces."));
-        items.add(createFoodItem(7, "Chocolate Brownie", 149, "https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?w=500", "Rich chocolate fudge brownie with ice cream."));
-        items.add(createFoodItem(8, "Veggie Biryani", 279, "https://images.unsplash.com/photo-1645112411341-6c4ee32510d8?w=500", "Fragrant basmati rice with mixed vegetables."));
-        return items;
-    }
-
-    private Map<String, Object> createFoodItem(int id, String name, int price, String image, String description) {
-        Map<String, Object> item = new HashMap<>();
-        item.put("id", id);
-        item.put("name", name);
-        item.put("price", price);
-        item.put("image", image);
-        item.put("description", description);
-        return item;
-    }
+    @Autowired
+    private FoodRepository foodRepository;
 
     // --- AUTHENTICATION ROUTES ---
 
@@ -55,6 +36,7 @@ public class FoodieController {
         User user = userRepository.findByUsername(username);
         if (user != null && user.getPassword().equals(password)) {
             session.setAttribute("user", user);
+            // Initializing cart with Map structure
             session.setAttribute("cart", new ArrayList<Map<String, Object>>());
             return "redirect:/menu";
         }
@@ -88,30 +70,35 @@ public class FoodieController {
         return "redirect:/";
     }
 
-    // --- SHOPPING ROUTES ---
+    // --- SHOPPING ROUTES (DATABASE DRIVEN) ---
 
     @GetMapping("/menu")
-    public String menu(HttpSession session, Model model) {
+    public String menu(@RequestParam(required = false) Boolean vegOnly, HttpSession session, Model model) {
         User user = (User) session.getAttribute("user");
         if (user == null) return "redirect:/";
         
         List<Map<String, Object>> cart = (List<Map<String, Object>>) session.getAttribute("cart");
+        
+        List<FoodItem> foodItems;
+        if (vegOnly != null) {
+            foodItems = foodRepository.findByIsVeg(vegOnly);
+        } else {
+            foodItems = foodRepository.findAll();
+        }
+        
         model.addAttribute("userName", user.getName());
-        model.addAttribute("foodItems", getFoodItems());
+        model.addAttribute("foodItems", foodItems);
+        // Using session cart size for the badge
         model.addAttribute("cartSize", cart != null ? cart.size() : 0);
         return "menu";
     }
 
     @GetMapping("/item/{id}")
-    public String viewItemDetail(@PathVariable int id, HttpSession session, Model model) {
+    public String viewItemDetail(@PathVariable Long id, HttpSession session, Model model) {
         User user = (User) session.getAttribute("user");
         if (user == null) return "redirect:/";
         
-        Map<String, Object> item = getFoodItems().stream()
-            .filter(i -> (int) i.get("id") == id)
-            .findFirst()
-            .orElse(null);
-        
+        FoodItem item = foodRepository.findById(id).orElse(null);
         if (item == null) return "redirect:/menu";
         
         List<Map<String, Object>> cart = (List<Map<String, Object>>) session.getAttribute("cart");
@@ -129,20 +116,23 @@ public class FoodieController {
         List<Map<String, Object>> cart = (List<Map<String, Object>>) session.getAttribute("cart");
         if (cart == null) cart = new ArrayList<>();
         
-        int subtotal = cart.stream()
-            .mapToInt(item -> (int) item.get("price") * (int) item.get("quantity"))
+        // Use Long for price calculation if price is stored as double in DB
+        double subtotal = cart.stream()
+            .mapToDouble(item -> ((Number) item.get("price")).doubleValue() * (int) item.get("quantity"))
             .sum();
+            
+        double deliveryCharge = (subtotal >= 500 || subtotal == 0) ? 0 : 50;
             
         model.addAttribute("userName", user.getName());
         model.addAttribute("cart", cart);
-        model.addAttribute("subtotal", subtotal);
-        model.addAttribute("delivery", 50);
-        model.addAttribute("total", subtotal + 50);
+        model.addAttribute("subtotal", (int) subtotal);
+        model.addAttribute("delivery", (int) deliveryCharge);
+        model.addAttribute("total", (int) (subtotal + deliveryCharge));
         return "cart";
     }
 
     @PostMapping("/addToCart")
-    public String addToCart(@RequestParam int itemId, @RequestParam String itemName, @RequestParam int itemPrice, 
+    public String addToCart(@RequestParam Long itemId, @RequestParam String itemName, @RequestParam Double itemPrice, 
                            @RequestParam(defaultValue = "1") int quantity, HttpSession session) {
         List<Map<String, Object>> cart = (List<Map<String, Object>>) session.getAttribute("cart");
         if (cart == null) {
@@ -152,6 +142,7 @@ public class FoodieController {
         
         boolean found = false;
         for (Map<String, Object> item : cart) {
+            // Using equals() with Long IDs
             if (item.get("id").equals(itemId)) {
                 int currentQty = (int) item.get("quantity");
                 item.put("quantity", currentQty + quantity);
@@ -171,8 +162,23 @@ public class FoodieController {
         return "redirect:/menu";
     }
 
+    @PostMapping("/increaseQuantity")
+    public String increaseQuantity(@RequestParam Long itemId, HttpSession session) {
+        List<Map<String, Object>> cart = (List<Map<String, Object>>) session.getAttribute("cart");
+        if (cart != null) {
+            for (Map<String, Object> item : cart) {
+                if (item.get("id").equals(itemId)) {
+                    int currentQty = (int) item.get("quantity");
+                    item.put("quantity", currentQty + 1);
+                    break;
+                }
+            }
+        }
+        return "redirect:/cart";
+    }
+
     @PostMapping("/removeFromCart")
-    public String removeFromCart(@RequestParam int itemId, HttpSession session) {
+    public String removeFromCart(@RequestParam Long itemId, HttpSession session) {
         List<Map<String, Object>> cart = (List<Map<String, Object>>) session.getAttribute("cart");
         if (cart != null) {
             cart.removeIf(item -> item.get("id").equals(itemId));
