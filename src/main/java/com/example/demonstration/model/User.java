@@ -23,4 +23,28 @@ public class User {
     @NotBlank(message = "Password is required")
     @Size(min = 6, message = "Password must be at least 6 characters")
     private String password;
+
+    @Column(columnDefinition = "TEXT")
+    private String address;
+
+    @Lob
+    @Column(name = "profile_pic", columnDefinition = "LONGTEXT")
+    private String profilePic;
+
+    // MANUALLY ADDED GETTERS AND SETTERS TO FIX COMPILATION ERROR
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public String getProfilePic() {
+        return profilePic;
+    }
+
+    public void setProfilePic(String profilePic) {
+        this.profilePic = profilePic;
+    }
 }

@@ -3,39 +3,165 @@
 <head>
     <title>Foodie | Order Now</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Dark Mode Toggle Logic
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+            const isDark = document.documentElement.classList.contains('dark');
+            localStorage.setItem('darkMode', isDark ? 'enabled' : 'disabled');
+        }
+
+        // On load, apply dark mode if saved in local storage
+        window.addEventListener('DOMContentLoaded', () => {
+            if (localStorage.getItem('darkMode') === 'enabled') {
+                document.documentElement.classList.add('dark');
+            }
+        });
+
+        // Profile Drawer Toggle
+        function toggleDrawer() {
+            const drawer = document.getElementById('profile-drawer');
+            const overlay = document.getElementById('drawer-overlay');
+            drawer.classList.toggle('translate-x-full');
+            overlay.classList.toggle('hidden');
+        }
+
+        // Base64 Image Conversion (Pick from Device)
+        function previewAndConvert(input) {
+            const file = input.files[0];
+            const reader = new FileReader();
+            reader.onloadend = function() {
+                const base64String = reader.result;
+                // Update previews
+                document.getElementById('drawer-img-preview').src = base64String;
+                document.getElementById('nav-img-preview').src = base64String;
+                // Update hidden input for controller
+                document.getElementById('profilePicInput').value = base64String;
+            }
+            if (file) { reader.readAsDataURL(file); }
+        }
+    </script>
+    <style>
+        /* Smooth transition for dark mode */
+        .transition-colors { transition: background-color 0.3s, color 0.3s; }
+        .dark body { background-color: #121212; color: #e5e7eb; }
+        .dark .bg-white { background-color: #1f1f1f; color: white; border-color: #333; }
+        .dark .text-gray-800 { color: #f3f4f6; }
+        .dark .text-gray-700 { color: #d1d5db; }
+        .dark .bg-gray-100 { background-color: #2d2d2d; }
+        .dark .bg-[#FFF8F0] { background-color: #121212; }
+    </style>
 </head>
-<body class="bg-[#FFF8F0]">
+<body class="bg-[#FFF8F0] transition-colors duration-300">
+
+    <div id="drawer-overlay" onclick="toggleDrawer()" class="fixed inset-0 bg-black/50 z-[60] hidden backdrop-blur-sm"></div>
+    
+    <div id="profile-drawer" class="fixed right-0 top-0 h-full w-80 bg-white z-[70] translate-x-full transition-transform duration-300 p-8 shadow-2xl overflow-y-auto border-l border-orange-100">
+        <div class="flex justify-between items-center mb-8">
+            <h2 class="text-2xl font-black text-[#FF8C42]">Settings</h2>
+            <button onclick="toggleDrawer()" class="text-gray-400 text-3xl hover:text-gray-600">&times;</button>
+        </div>
+
+        <div class="text-center mb-8">
+            <img id="drawer-img-preview" th:src="${user.profilePic != null ? user.profilePic : 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'}" 
+                 class="w-24 h-24 rounded-full mx-auto border-4 border-orange-100 shadow-lg object-cover">
+            <h3 class="mt-4 font-bold text-xl text-gray-800" th:text="${user.name}">User</h3>
+            <p class="text-gray-400 text-sm" th:text="'@' + ${user.username}">username</p>
+        </div>
+
+        <form th:action="@{/updateProfile}" method="post" class="space-y-4">
+            <label class="block text-xs font-black uppercase text-gray-400 tracking-widest">Profile Picture</label>
+            <div class="flex items-center gap-2">
+                <input type="file" id="filePicker" accept="image/*" class="hidden" onchange="previewAndConvert(this)">
+                <button type="button" onclick="document.getElementById('filePicker').click()" 
+                        class="w-full bg-gray-50 border-2 border-dashed border-gray-200 py-3 rounded-xl text-gray-500 font-bold hover:border-[#FF8C42] hover:text-[#FF8C42] transition text-sm">
+                    Choose from Device
+                </button>
+            </div>
+            <input type="hidden" name="profilePic" id="profilePicInput" th:value="${user.profilePic}">
+            
+            <label class="block text-xs font-black uppercase text-gray-400 tracking-widest">Delivery Address</label>
+            <textarea name="address" th:text="${user.address}" placeholder="Save your address here..."
+                class="w-full p-4 bg-gray-50 rounded-2xl border border-gray-100 focus:border-[#FF8C42] outline-none h-24 transition"></textarea>
+            
+            <button type="submit" class="w-full bg-[#FF8C42] text-white py-3 rounded-2xl font-bold hover:bg-[#E67E30] transition shadow-lg shadow-orange-100">
+                Save Profile
+            </button>
+        </form>
+
+        <hr class="my-8 border-gray-100">
+
+        <form th:action="@{/changePassword}" method="post" class="space-y-4">
+            <h4 class="font-bold text-gray-800">Change Password</h4>
+            <input type="password" name="oldPassword" placeholder="Current Password" required
+                   class="w-full p-3 bg-gray-50 rounded-xl border border-gray-100 outline-none focus:border-gray-800 transition">
+            <input type="password" name="newPassword" placeholder="New Password" required
+                   class="w-full p-3 bg-gray-50 rounded-xl border border-gray-100 outline-none focus:border-gray-800 transition">
+            <button type="submit" class="w-full bg-gray-800 text-white py-3 rounded-2xl font-bold hover:bg-black transition">
+                Update Password
+            </button>
+        </form>
+    </div>
+
     <nav class="bg-white shadow-md p-4 flex justify-between items-center border-b-4 border-[#FF8C42] sticky top-0 z-50">
         <h1 class="text-3xl font-bold text-[#FF8C42]">Foodie.</h1>
-        <div class="flex items-center gap-6">
-            <span class="text-gray-700 font-medium">Welcome back, <span class="text-[#FF8C42]" th:text="${userName}">User</span>!</span>
+        
+        <form th:action="@{/menu}" method="get" class="hidden md:flex flex-1 max-w-md mx-8 relative">
+            <input type="text" name="search" placeholder="Search for food..." th:value="${param.search}"
+                class="w-full pl-12 pr-4 py-2 bg-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-[#FF8C42]/30 transition-all border border-transparent focus:bg-white">
+            <span class="absolute left-4 top-2.5 text-gray-400 text-lg">🔍</span>
+        </form>
+
+        <div class="flex items-center gap-4">
+            <button onclick="toggleDarkMode()" class="p-2.5 bg-gray-100 rounded-full hover:bg-orange-100 transition group">
+                <span class="dark:hidden text-xl group-hover:rotate-12 transition-transform inline-block">🌙</span>
+                <span class="hidden dark:inline text-xl text-yellow-400">☀️</span>
+            </button>
+
             <a href="/cart" class="relative bg-orange-100 text-[#FF8C42] px-4 py-2 rounded-lg hover:bg-orange-200 transition font-bold flex items-center gap-2">
                 🛒 Cart 
                 <span th:if="${cartSize > 0}" class="bg-[#FF8C42] text-white text-xs px-2 py-1 rounded-full font-extrabold" th:text="${cartSize}">0</span>
             </a>
-            <a href="/logout" class="bg-[#FF8C42] text-white px-4 py-2 rounded-lg hover:bg-[#E67E30] transition">Logout</a>
+            
+            <div class="flex items-center gap-3 ml-2 border-l pl-4 border-gray-100">
+                <img id="nav-img-preview" onclick="toggleDrawer()" 
+                     th:src="${user.profilePic != null ? user.profilePic : 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'}" 
+                     class="w-10 h-10 rounded-full cursor-pointer border-2 border-[#FF8C42] hover:scale-110 transition shadow-sm object-cover">
+            </div>
         </div>
     </nav>
 
     <div class="max-w-7xl mx-auto p-6">
-        <header class="text-center py-12">
-            <h2 class="text-5xl font-extrabold text-gray-800">What's on your mind?</h2>
-            <p class="text-gray-500 mt-2">Fresh ingredients, fast delivery, and extra love.</p>
-            
-            <div class="mt-6 flex justify-center gap-4">
-                <a href="/menu" class="px-6 py-2 rounded-full border-2 border-gray-200 font-bold hover:border-[#FF8C42] transition">All</a>
-                <a href="/menu?vegOnly=true" class="px-6 py-2 rounded-full border-2 border-green-200 text-green-600 font-bold hover:bg-green-50 transition">Veg Only</a>
-                <a href="/menu?vegOnly=false" class="px-6 py-2 rounded-full border-2 border-red-200 text-red-600 font-bold hover:bg-red-50 transition">Non-Veg</a>
+        <div th:if="${success}" class="max-w-md mx-auto mb-6 p-4 bg-green-100 text-green-700 rounded-2xl font-bold text-center border border-green-200" th:text="${success}"></div>
+        <div th:if="${error}" class="max-w-md mx-auto mb-6 p-4 bg-red-100 text-red-700 rounded-2xl font-bold text-center border border-red-200" th:text="${error}"></div>
+
+        <div class="relative overflow-hidden rounded-[3rem] bg-gradient-to-r from-[#FF8C42] to-[#ffaf7b] h-[350px] flex items-center mb-12 shadow-2xl shadow-orange-200">
+            <div class="absolute right-0 top-0 h-full w-1/2 opacity-20 hidden md:block">
+                <img src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800" class="object-cover h-full w-full">
             </div>
-        </header>
+            <div class="p-12 relative z-10 md:w-2/3">
+                <span class="bg-white/20 text-white px-4 py-1 rounded-full text-sm font-bold backdrop-blur-md uppercase tracking-widest">Hungry?</span>
+                <h2 class="text-6xl font-black text-white mt-4 leading-tight">We've got <br> you covered.</h2>
+                <p class="text-orange-50 mt-4 text-lg font-medium max-w-md italic">Fresh ingredients, super fast delivery, extra love.</p>
+            </div>
+        </div>
+
+        <div class="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
+            <h3 class="text-3xl font-extrabold text-gray-800">What's on your mind?</h3>
+            <div class="flex gap-3 bg-white p-2 rounded-2xl shadow-sm border border-orange-100">
+                <a href="/menu" class="px-6 py-2 rounded-xl font-bold transition hover:text-[#FF8C42] text-gray-500">All Items</a>
+                <a href="/menu?vegOnly=true" class="px-6 py-2 rounded-xl text-green-600 font-bold hover:bg-green-50 transition border border-transparent hover:border-green-200">● Veg Only</a>
+                <a href="/menu?vegOnly=false" class="px-6 py-2 rounded-xl text-red-600 font-bold hover:bg-red-50 transition border border-transparent hover:border-red-200">● Non-Veg</a>
+            </div>
+        </div>
 
         <main class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             <div th:each="item : ${foodItems}" class="bg-white rounded-[2.5rem] shadow-lg overflow-hidden border border-orange-100 transform hover:scale-105 transition duration-300 group">
                 
                 <div class="relative h-52 overflow-hidden">
                     <img th:src="${item.image}" th:alt="${item.name}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
-                    <div class="absolute top-4 left-4 px-3 py-1 rounded-full text-[10px] font-bold shadow-sm border"
-                         th:classappend="${item.isVeg ? 'bg-white text-green-600 border-green-200' : 'bg-white text-red-600 border-red-200'}"
+                    <div class="absolute top-4 left-4 px-3 py-1 rounded-full text-[10px] font-bold shadow-sm border bg-white"
+                         th:classappend="${item.isVeg ? 'text-green-600 border-green-200' : 'text-red-600 border-red-200'}"
                          th:text="${item.isVeg ? '● VEG' : '● NON-VEG'}">
                     </div>
                 </div>
@@ -49,7 +175,7 @@
                     <p class="text-gray-500 text-sm mb-6 line-clamp-2" th:text="${item.description}">Description</p>
 
                     <div class="flex gap-3">
-                        <a th:href="@{/item/{id}(id=${item.id})}" class="flex-1 bg-gray-50 text-gray-600 py-3 rounded-2xl font-bold hover:bg-gray-100 transition text-center text-sm">
+                        <a th:href="@{/item/{id}(id=${item.id})}" class="flex-1 bg-gray-50 text-gray-500 py-3 rounded-2xl font-bold hover:bg-gray-100 transition text-center text-[10px] uppercase tracking-widest">
                             Details
                         </a>
 

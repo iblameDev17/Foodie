@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Controller
 public class FoodieController {
@@ -73,22 +74,31 @@ public class FoodieController {
     // --- SHOPPING ROUTES (DATABASE DRIVEN) ---
 
     @GetMapping("/menu")
-    public String menu(@RequestParam(required = false) Boolean vegOnly, HttpSession session, Model model) {
+    public String menu(@RequestParam(required = false) Boolean vegOnly, 
+                       @RequestParam(required = false) String search, 
+                       HttpSession session, Model model) {
         User user = (User) session.getAttribute("user");
         if (user == null) return "redirect:/";
         
         List<Map<String, Object>> cart = (List<Map<String, Object>>) session.getAttribute("cart");
         
+        // --- UPDATED SEARCH & FILTER LOGIC ---
         List<FoodItem> foodItems;
         if (vegOnly != null) {
             foodItems = foodRepository.findByIsVeg(vegOnly);
         } else {
             foodItems = foodRepository.findAll();
         }
+
+        if (search != null && !search.isEmpty()) {
+            foodItems = foodItems.stream()
+                .filter(i -> i.getName().toLowerCase().contains(search.toLowerCase()))
+                .collect(Collectors.toList());
+        }
         
+        model.addAttribute("user", user); // Pass full user object for the drawer
         model.addAttribute("userName", user.getName());
         model.addAttribute("foodItems", foodItems);
-        // Using session cart size for the badge
         model.addAttribute("cartSize", cart != null ? cart.size() : 0);
         return "menu";
     }
@@ -116,7 +126,6 @@ public class FoodieController {
         List<Map<String, Object>> cart = (List<Map<String, Object>>) session.getAttribute("cart");
         if (cart == null) cart = new ArrayList<>();
         
-        // Use Long for price calculation if price is stored as double in DB
         double subtotal = cart.stream()
             .mapToDouble(item -> ((Number) item.get("price")).doubleValue() * (int) item.get("quantity"))
             .sum();
@@ -142,7 +151,6 @@ public class FoodieController {
         
         boolean found = false;
         for (Map<String, Object> item : cart) {
-            // Using equals() with Long IDs
             if (item.get("id").equals(itemId)) {
                 int currentQty = (int) item.get("quantity");
                 item.put("quantity", currentQty + quantity);
@@ -191,6 +199,74 @@ public class FoodieController {
         List<Map<String, Object>> cart = (List<Map<String, Object>>) session.getAttribute("cart");
         if (cart != null) {
             cart.clear();
+        }
+        return "redirect:/menu";
+    }
+
+    // --- CHECKOUT & ORDER ROUTES ---
+
+    @GetMapping("/checkout")
+    public String checkout(HttpSession session, Model model) {
+        User user = (User) session.getAttribute("user");
+        if (user == null) return "redirect:/";
+        
+        List<Map<String, Object>> cart = (List<Map<String, Object>>) session.getAttribute("cart");
+        if (cart == null || cart.isEmpty()) return "redirect:/menu";
+
+        double subtotal = cart.stream()
+            .mapToDouble(item -> ((Number) item.get("price")).doubleValue() * (int) item.get("quantity"))
+            .sum();
+        double delivery = (subtotal >= 500) ? 0 : 50;
+
+        model.addAttribute("userName", user.getName());
+        model.addAttribute("total", (int)(subtotal + delivery));
+        // Pass address from DB to checkout if available
+        model.addAttribute("userAddress", user.getAddress()); 
+        return "checkout";
+    }
+
+    @PostMapping("/placeOrder")
+    public String processOrder(@RequestParam String address, @RequestParam String paymentMethod, HttpSession session, RedirectAttributes ra) {
+        session.setAttribute("cart", new ArrayList<Map<String, Object>>());
+        ra.addFlashAttribute("address", address);
+        return "redirect:/orderSuccess";
+    }
+
+    @GetMapping("/orderSuccess")
+    public String orderSuccess(HttpSession session, Model model) {
+        User user = (User) session.getAttribute("user");
+        if (user == null) return "redirect:/";
+        model.addAttribute("userName", user.getName());
+        return "order-success";
+    }
+
+    // --- NEW PROFILE MANAGEMENT ROUTES ---
+
+    @PostMapping("/updateProfile")
+    public String updateProfile(@RequestParam String address, @RequestParam String profilePic, HttpSession session, RedirectAttributes ra) {
+        User currentUser = (User) session.getAttribute("user");
+        if (currentUser != null) {
+            currentUser.setAddress(address);
+            currentUser.setProfilePic(profilePic);
+            userRepository.save(currentUser);
+            session.setAttribute("user", currentUser); // Update session with new data
+            ra.addFlashAttribute("success", "Profile updated successfully!");
+        }
+        return "redirect:/menu";
+    }
+
+    @PostMapping("/changePassword")
+    public String changePassword(@RequestParam String oldPassword, @RequestParam String newPassword, HttpSession session, RedirectAttributes ra) {
+        User currentUser = (User) session.getAttribute("user");
+        if (currentUser != null) {
+            if (currentUser.getPassword().equals(oldPassword)) {
+                currentUser.setPassword(newPassword);
+                userRepository.save(currentUser);
+                session.setAttribute("user", currentUser);
+                ra.addFlashAttribute("success", "Password changed successfully!");
+            } else {
+                ra.addFlashAttribute("error", "Incorrect old password!");
+            }
         }
         return "redirect:/menu";
     }

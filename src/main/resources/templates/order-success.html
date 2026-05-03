@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Foodie | Order Success</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-[#FFF8F0] min-h-screen flex items-center justify-center p-6">
+    <div class="bg-white max-w-lg w-full rounded-[3rem] shadow-2xl p-12 text-center border border-orange-100">
+        <div class="w-24 h-24 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-5xl mx-auto mb-8 animate-bounce">
+            ✓
+        </div>
+        <h1 class="text-4xl font-black text-gray-800 mb-4">Yay! Order Placed.</h1>
+        <p class="text-gray-500 text-lg mb-8">Hang tight, <span class="text-[#FF8C42] font-bold" th:text="${userName}">User</span>! Our delivery partner is heading to your kitchen.</p>
+        
+        <div class="bg-gray-50 rounded-3xl p-6 mb-8 text-left border border-dashed border-gray-200">
+            <h4 class="text-xs uppercase font-black text-gray-400 mb-2 tracking-widest">Delivery To</h4>
+            <p class="text-gray-700 font-medium" th:text="${address}">Current Location</p>
+            <p class="text-green-600 font-bold mt-4">Arriving in: 35 - 45 mins</p>
+        </div>
+
+        <a href="/menu" class="block w-full bg-[#FF8C42] text-white py-4 rounded-2xl font-bold hover:bg-[#E67E30] transition">
+            Back to Menu
+        </a>
+    </div>
+</body>
+</html>

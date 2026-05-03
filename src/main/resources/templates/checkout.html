@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Foodie | Checkout</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-[#FFF8F0]">
+    <div class="max-w-3xl mx-auto p-8">
+        <div class="bg-white rounded-[3rem] shadow-2xl overflow-hidden border border-orange-100">
+            <div class="bg-[#FF8C42] p-10 text-center text-white">
+                <h1 class="text-4xl font-black">Final Step</h1>
+                <p class="text-orange-100 mt-2">Complete your details to place the order</p>
+            </div>
+            
+            <form th:action="@{/placeOrder}" method="post" class="p-10 space-y-8">
+                <div>
+                    <label class="block text-gray-700 font-bold mb-3 text-lg">Delivery Address</label>
+                    <textarea name="address" required placeholder="Flat No, Building, Street, Landmark..."
+                        class="w-full px-6 py-4 rounded-3xl bg-gray-50 border border-gray-200 focus:border-[#FF8C42] focus:ring-2 focus:ring-[#FF8C42]/20 outline-none h-32 transition"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-gray-700 font-bold mb-3 text-lg">Payment Method</label>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <label class="cursor-pointer group">
+                            <input type="radio" name="paymentMethod" value="COD" class="hidden peer" checked>
+                            <div class="p-6 border-2 border-gray-100 rounded-3xl peer-checked:border-[#FF8C42] peer-checked:bg-orange-50 transition-all text-center">
+                                <span class="text-2xl mb-2 block">💵</span>
+                                <span class="font-bold text-gray-700">Cash on Delivery</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer group">
+                            <input type="radio" name="paymentMethod" value="UPI" class="hidden peer">
+                            <div class="p-6 border-2 border-gray-100 rounded-3xl peer-checked:border-[#FF8C42] peer-checked:bg-orange-50 transition-all text-center">
+                                <span class="text-2xl mb-2 block">📱</span>
+                                <span class="font-bold text-gray-700">UPI / GPay</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="bg-orange-50 p-6 rounded-3xl flex justify-between items-center">
+                    <span class="text-gray-600 font-bold uppercase tracking-wider">Total Payable</span>
+                    <span class="text-3xl font-black text-[#FF8C42]" th:text="'₹' + ${total}"></span>
+                </div>
+
+                <button type="submit" class="w-full bg-[#FF8C42] text-white py-5 rounded-[2rem] font-bold text-xl hover:bg-[#E67E30] transition shadow-xl shadow-orange-200">
+                    Confirm Order
+                </button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
