@@ -56,16 +56,16 @@
 
     <div id="drawer-overlay" onclick="toggleDrawer()" class="fixed inset-0 bg-black/50 z-[60] hidden backdrop-blur-sm"></div>
     
-    <div id="profile-drawer" class="fixed right-0 top-0 h-full w-80 bg-white z-[70] translate-x-full transition-transform duration-300 p-8 shadow-2xl overflow-y-auto border-l border-orange-100">
+    <div id="profile-drawer" class="fixed right-0 top-0 h-full w-80 bg-white dark:bg-[#1f1f1f] z-[70] translate-x-full transition-transform duration-300 p-8 shadow-2xl overflow-y-auto border-l border-orange-100 dark:border-gray-800">
         <div class="flex justify-between items-center mb-8">
             <h2 class="text-2xl font-black text-[#FF8C42]">Settings</h2>
-            <button onclick="toggleDrawer()" class="text-gray-400 text-3xl hover:text-gray-600">&times;</button>
+            <button onclick="toggleDrawer()" class="text-gray-400 text-3xl hover:text-gray-600 transition-colors">&times;</button>
         </div>
 
         <div class="text-center mb-8">
             <img id="drawer-img-preview" th:src="${user.profilePic != null ? user.profilePic : 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'}" 
                  class="w-24 h-24 rounded-full mx-auto border-4 border-orange-100 shadow-lg object-cover">
-            <h3 class="mt-4 font-bold text-xl text-gray-800" th:text="${user.name}">User</h3>
+            <h3 class="mt-4 font-bold text-xl text-gray-800 dark:text-white" th:text="${user.name}">User</h3>
             <p class="text-gray-400 text-sm" th:text="'@' + ${user.username}">username</p>
         </div>
 
@@ -74,7 +74,7 @@
             <div class="flex items-center gap-2">
                 <input type="file" id="filePicker" accept="image/*" class="hidden" onchange="previewAndConvert(this)">
                 <button type="button" onclick="document.getElementById('filePicker').click()" 
-                        class="w-full bg-gray-50 border-2 border-dashed border-gray-200 py-3 rounded-xl text-gray-500 font-bold hover:border-[#FF8C42] hover:text-[#FF8C42] transition text-sm">
+                        class="w-full bg-gray-50 dark:bg-gray-800 border-2 border-dashed border-gray-200 dark:border-gray-700 py-3 rounded-xl text-gray-500 font-bold hover:border-[#FF8C42] hover:text-[#FF8C42] transition text-sm">
                     Choose from Device
                 </button>
             </div>
@@ -82,25 +82,40 @@
             
             <label class="block text-xs font-black uppercase text-gray-400 tracking-widest">Delivery Address</label>
             <textarea name="address" th:text="${user.address}" placeholder="Save your address here..."
-                class="w-full p-4 bg-gray-50 rounded-2xl border border-gray-100 focus:border-[#FF8C42] outline-none h-24 transition"></textarea>
+                class="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 focus:border-[#FF8C42] outline-none h-24 transition dark:text-gray-200"></textarea>
             
             <button type="submit" class="w-full bg-[#FF8C42] text-white py-3 rounded-2xl font-bold hover:bg-[#E67E30] transition shadow-lg shadow-orange-100">
                 Save Profile
             </button>
         </form>
 
-        <hr class="my-8 border-gray-100">
+        <hr class="my-8 border-gray-100 dark:border-gray-800">
 
-        <form th:action="@{/changePassword}" method="post" class="space-y-4">
-            <h4 class="font-bold text-gray-800">Change Password</h4>
+        <div class="mb-8">
+            <a href="/orderHistory" class="flex items-center justify-between w-full p-4 bg-orange-50 dark:bg-orange-900/10 text-[#FF8C42] rounded-2xl font-bold hover:bg-orange-100 transition border border-orange-100 dark:border-orange-900/20">
+                <span class="flex items-center gap-3">
+                    <span>📜</span> Order History
+                </span>
+                <span>→</span>
+            </a>
+        </div>
+
+        <form th:action="@{/changePassword}" method="post" class="space-y-4 mb-8">
+            <h4 class="font-bold text-gray-800 dark:text-white">Security</h4>
             <input type="password" name="oldPassword" placeholder="Current Password" required
-                   class="w-full p-3 bg-gray-50 rounded-xl border border-gray-100 outline-none focus:border-gray-800 transition">
+                   class="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 outline-none focus:border-gray-800 transition dark:text-gray-200">
             <input type="password" name="newPassword" placeholder="New Password" required
-                   class="w-full p-3 bg-gray-50 rounded-xl border border-gray-100 outline-none focus:border-gray-800 transition">
-            <button type="submit" class="w-full bg-gray-800 text-white py-3 rounded-2xl font-bold hover:bg-black transition">
+                   class="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 outline-none focus:border-gray-800 transition dark:text-gray-200">
+            <button type="submit" class="w-full bg-gray-800 dark:bg-gray-700 text-white py-3 rounded-2xl font-bold hover:bg-black transition">
                 Update Password
             </button>
         </form>
+
+        <div class="pt-4 border-t border-gray-100 dark:border-gray-800">
+            <a href="/logout" class="flex items-center justify-center gap-3 w-full border-2 border-red-100 dark:border-red-900/30 text-red-500 py-3 rounded-2xl font-bold hover:bg-red-50 dark:hover:bg-red-900/10 transition">
+                <span>🚪</span> Logout Account
+            </a>
+        </div>
     </div>
 
     <nav class="bg-white shadow-md p-4 flex justify-between items-center border-b-4 border-[#FF8C42] sticky top-0 z-50">

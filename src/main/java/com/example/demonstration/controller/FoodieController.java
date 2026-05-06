@@ -13,6 +13,11 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -37,7 +42,6 @@ public class FoodieController {
         User user = userRepository.findByUsername(username);
         if (user != null && user.getPassword().equals(password)) {
             session.setAttribute("user", user);
-            // Initializing cart with Map structure
             session.setAttribute("cart", new ArrayList<Map<String, Object>>());
             return "redirect:/menu";
         }
@@ -82,7 +86,6 @@ public class FoodieController {
         
         List<Map<String, Object>> cart = (List<Map<String, Object>>) session.getAttribute("cart");
         
-        // --- UPDATED SEARCH & FILTER LOGIC ---
         List<FoodItem> foodItems;
         if (vegOnly != null) {
             foodItems = foodRepository.findByIsVeg(vegOnly);
@@ -96,7 +99,7 @@ public class FoodieController {
                 .collect(Collectors.toList());
         }
         
-        model.addAttribute("user", user); // Pass full user object for the drawer
+        model.addAttribute("user", user);
         model.addAttribute("userName", user.getName());
         model.addAttribute("foodItems", foodItems);
         model.addAttribute("cartSize", cart != null ? cart.size() : 0);
@@ -220,13 +223,41 @@ public class FoodieController {
 
         model.addAttribute("userName", user.getName());
         model.addAttribute("total", (int)(subtotal + delivery));
-        // Pass address from DB to checkout if available
         model.addAttribute("userAddress", user.getAddress()); 
         return "checkout";
     }
 
     @PostMapping("/placeOrder")
     public String processOrder(@RequestParam String address, @RequestParam String paymentMethod, HttpSession session, RedirectAttributes ra) {
+        User user = (User) session.getAttribute("user");
+        List<Map<String, Object>> cart = (List<Map<String, Object>>) session.getAttribute("cart");
+        
+        if (user == null || cart == null || cart.isEmpty()) return "redirect:/menu";
+
+        double subtotal = cart.stream().mapToDouble(i -> ((Number) i.get("price")).doubleValue() * (int) i.get("quantity")).sum();
+        double total = subtotal + (subtotal >= 500 ? 0 : 50);
+
+        String summary = cart.stream()
+            .map(i -> i.get("name") + " (x" + i.get("quantity") + ")")
+            .collect(Collectors.joining(", "));
+        
+        String idMapping = cart.stream()
+            .map(i -> i.get("id") + ":" + i.get("quantity"))
+            .collect(Collectors.joining(","));
+
+        // Save Order to DB
+        try (Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/javaDemo", "root", "root")) {
+            String sql = "INSERT INTO orders (user_id, items_summary, item_ids_json, total_amount, address, payment_method) VALUES (?, ?, ?, ?, ?, ?)";
+            PreparedStatement pstmt = conn.prepareStatement(sql);
+            pstmt.setLong(1, user.getId());
+            pstmt.setString(2, summary);
+            pstmt.setString(3, idMapping);
+            pstmt.setDouble(4, total);
+            pstmt.setString(5, address);
+            pstmt.setString(6, paymentMethod);
+            pstmt.executeUpdate();
+        } catch (Exception e) { e.printStackTrace(); }
+
         session.setAttribute("cart", new ArrayList<Map<String, Object>>());
         ra.addFlashAttribute("address", address);
         return "redirect:/orderSuccess";
@@ -240,20 +271,100 @@ public class FoodieController {
         return "order-success";
     }
 
-    // --- NEW PROFILE MANAGEMENT ROUTES ---
+    // --- ORDER HISTORY & RE-ORDER ---
+
+   @GetMapping("/orderHistory")
+    public String orderHistory(HttpSession session, Model model) {
+        User user = (User) session.getAttribute("user");
+        if (user == null) return "redirect:/";
+
+        List<Map<String, Object>> orders = new ArrayList<>();
+        // Make sure your DB password here is correct (e.g., "root" or your actual password)
+        try (Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/javaDemo", "root", "root")) {
+            String sql = "SELECT * FROM orders WHERE user_id = ? ORDER BY order_date DESC";
+            PreparedStatement pstmt = conn.prepareStatement(sql);
+            pstmt.setLong(1, user.getId());
+            ResultSet rs = pstmt.executeQuery();
+            
+            while (rs.next()) {
+                Map<String, Object> order = new HashMap<>();
+                order.put("id", rs.getLong("id"));
+                order.put("summary", rs.getString("items_summary"));
+                order.put("ids", rs.getString("item_ids_json"));
+                order.put("total", rs.getDouble("total_amount"));
+                
+                // CRITICAL FIX: Add this line so the HTML can find the payment method
+                String pm = rs.getString("payment_method");
+                order.put("payment_method", (pm != null) ? pm : "UPI"); 
+                
+                order.put("date", rs.getTimestamp("order_date").toLocalDateTime()
+                    .format(DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm a")));
+                
+                orders.add(order);
+            }
+        } catch (Exception e) { 
+            e.printStackTrace(); 
+        }
+
+        // REQUIRED for the background drawer if it references 'user'
+        model.addAttribute("user", user); 
+        model.addAttribute("userName", user.getName());
+        model.addAttribute("orders", orders);
+        
+        return "order-history";
+    }
+
+    @PostMapping("/reorder")
+    public String reorder(@RequestParam String ids, HttpSession session) {
+        List<Map<String, Object>> newCart = new ArrayList<>();
+        String[] items = ids.split(",");
+        
+        for (String itemStr : items) {
+            String[] parts = itemStr.split(":");
+            Long id = Long.parseLong(parts[0]);
+            int qty = Integer.parseInt(parts[1]);
+            
+            FoodItem food = foodRepository.findById(id).orElse(null);
+            if (food != null) {
+                Map<String, Object> cartItem = new HashMap<>();
+                cartItem.put("id", food.getId());
+                cartItem.put("name", food.getName());
+                cartItem.put("price", food.getPrice());
+                cartItem.put("quantity", qty);
+                newCart.add(cartItem);
+            }
+        }
+        session.setAttribute("cart", newCart);
+        return "redirect:/cart";
+    }
+
+    // --- PROFILE MANAGEMENT ROUTES ---
 
     @PostMapping("/updateProfile")
-    public String updateProfile(@RequestParam String address, @RequestParam String profilePic, HttpSession session, RedirectAttributes ra) {
-        User currentUser = (User) session.getAttribute("user");
-        if (currentUser != null) {
+public String updateProfile(
+    @RequestParam(required = false) String address, 
+    @RequestParam(required = false) String profilePic, 
+    HttpSession session, 
+    RedirectAttributes ra) {
+    
+    User currentUser = (User) session.getAttribute("user");
+    if (currentUser != null) {
+        // If address is null, keep the old one; otherwise update it
+        if (address != null) {
             currentUser.setAddress(address);
-            currentUser.setProfilePic(profilePic);
-            userRepository.save(currentUser);
-            session.setAttribute("user", currentUser); // Update session with new data
-            ra.addFlashAttribute("success", "Profile updated successfully!");
         }
-        return "redirect:/menu";
+        
+        // If a new profile pic was picked, update it
+        if (profilePic != null && !profilePic.isEmpty()) {
+            currentUser.setProfilePic(profilePic);
+        }
+        
+        userRepository.save(currentUser);
+        session.setAttribute("user", currentUser); 
+        ra.addFlashAttribute("success", "Profile updated successfully!");
     }
+    return "redirect:/menu";
+}
 
     @PostMapping("/changePassword")
     public String changePassword(@RequestParam String oldPassword, @RequestParam String newPassword, HttpSession session, RedirectAttributes ra) {
